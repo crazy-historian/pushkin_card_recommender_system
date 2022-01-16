@@ -2,14 +2,18 @@ import pandas as pd
 from datetime import datetime
 from typing import List, Union, Optional
 
-REGION_FILE_PATH = './dataset/users_and_purchases/region.txt'
-REGION_NUMS_FILE_PATH = './dataset/RegionRussia.csv'
-USERS_FILE_PATH = './dataset/users_and_purchases/users.txt'
-CLICK_FILE_PATH = './dataset/users_and_purchases/click.txt'
-EXPANDED_CLICK_FILE_PATH = './dataset/cliks_add.csv'
+path_input = input('Введите путь к исходным файлам: ')
+path_work = input('Введите путь к промежуточным файлам: ')
+path_output = input('Введите путь к итоговым файлам: ')
 
-ALL_EVENTS_FILE_PATH = './dataset/users_and_purchases/events/events_pushka_accepted_30122021.csv'
-ORGANIZATIONS_FILE_PATH = './dataset/users_and_purchases/events/organizations.csv'
+REGION_FILE_PATH = path_input + '/region.txt'
+REGION_NUMS_FILE_PATH = path_input + '/RegionRussia.csv'
+USERS_FILE_PATH = path_input + '/users.txt'
+CLICK_FILE_PATH = path_input + '/click.txt'
+EXPANDED_CLICK_FILE_PATH = path_input + '/cliks_add.csv'
+
+ALL_EVENTS_FILE_PATH = path_input + '/events_pushka_accepted_30122021.csv'
+ORGANIZATIONS_FILE_PATH = path_input + '/organizations.csv'
 
 DOWNLOAD_DATE = '2021-11-15'
 DOWNLOAD_DATE = datetime.strptime(str(DOWNLOAD_DATE), "%Y-%m-%d")
