@@ -34,14 +34,18 @@ def get_user_age(user_id: str, user_age: dict) -> Optional[int]:
         return None
 
 
-def get_user_dataframe() -> pd.DataFrame:
-    users_df = pd.read_csv(USERS_FILE_PATH, sep=';')
+def get_user_dataframe(
+        users_file_path: str,
+        regions_file_path: str,
+        regions_nums_file_path: str
+) -> pd.DataFrame:
+    users_df = pd.read_csv(users_file_path, sep=';')
     users_age = users_df
     users_age['user_age'] = users_age['user_birth'].apply(func=get_user_age_in_years)
     users_age_dict = dict(zip(users_age.user_id, users_age.user_age))
 
-    users_regions_df = pd.read_csv(REGION_FILE_PATH, sep=';')
-    region_nums = pd.read_csv(REGION_NUMS_FILE_PATH)
+    users_regions_df = pd.read_csv(regions_file_path, sep=';')
+    region_nums = pd.read_csv(regions_nums_file_path)
     region_nums = region_nums.rename(columns={
         'Наименование субъекта': 'region_name',
         'Код ГИБДД': 'region_code'
@@ -76,9 +80,12 @@ def get_event_category(org_id: int, categories_dict) -> Optional[str]:
         return None
 
 
-def get_events_dataframe() -> pd.DataFrame:
-    all_events_df = pd.read_csv(ALL_EVENTS_FILE_PATH)
-    organizations_df = pd.read_csv(ORGANIZATIONS_FILE_PATH, sep=';')
+def get_events_dataframe(
+        events_file_path: str,
+        organizations_file_path: str
+) -> pd.DataFrame:
+    all_events_df = pd.read_csv(events_file_path)
+    organizations_df = pd.read_csv(organizations_file_path, sep=';')
 
     organizations = organizations_df
     organizations = organizations.rename(columns={
@@ -111,8 +118,10 @@ def get_events_dataframe() -> pd.DataFrame:
 
 #########################
 
-def get_clicks_dataframe() -> pd.DataFrame:
-    clicks_df = pd.read_csv(EXPANDED_CLICK_FILE_PATH, sep=';')
+def get_clicks_dataframe(
+        clicks_file_path: str
+) -> pd.DataFrame:
+    clicks_df = pd.read_csv(clicks_file_path, sep=';')
     clicks = clicks_df
     clicks = clicks.drop(columns=['url',
                                   'create_date',
@@ -123,11 +132,13 @@ def get_clicks_dataframe() -> pd.DataFrame:
                                   'user_phone_details_id',
                                   'user_phone_details_id_2',
                                   'session_identity',
-                                  'session_name',
                                   'organization_name',
                                   'Org_region_number', 'org_category', 'age'
                                   ])
-    clicks = clicks.rename(columns={'session_id': 'event_id'})
+    clicks = clicks.rename(columns={
+        'session_id': 'event_id',
+        'session_name': 'event_name'
+    })
     clicks = clicks.drop_duplicates(['create_time', 'user_id'])
     clicks = clicks.dropna(subset=['event_id', 'organization_id'])
     return clicks
@@ -135,10 +146,13 @@ def get_clicks_dataframe() -> pd.DataFrame:
 
 #########################
 
-def get_user_event_dataframe() -> pd.DataFrame:
-    user_event_df = get_clicks_dataframe()
-    user_event = user_event_df.groupby(['user_id', 'event_id'])['create_time'].count().reset_index()
+def get_user_event_dataframe(
+        user_event_file_path: str
+) -> pd.DataFrame:
+    user_event_df = get_clicks_dataframe(user_event_file_path)
+    user_event = user_event_df.groupby(['user_id', 'event_id', 'event_name'])['create_time'].count().reset_index()
     user_event = user_event.rename(columns={'create_time': 'clicks_count'})
+    user_event['event_id'] = user_event['event_id'].astype(int)
     return user_event
 
 
@@ -197,29 +211,3 @@ def filter_user_event_by_event_region(
     event_id_set = set(event_by_region.event_id)
     user_event = user_event_df.loc[user_event_df['event_id'].isin(event_id_set)]
     return user_event
-
-
-user_event = get_user_event_dataframe()
-users = get_user_dataframe()
-
-user_event = filter_user_event_df_by_user_age(
-    user_event_df=user_event,
-    user_df=users,
-    user_age=16
-)
-user_event = filter_user_event_by_user_region(
-    user_event_df=user_event,
-    user_df=users,
-    user_region=77
-)
-
-events = get_events_dataframe()
-
-user_event = filter_user_event_by_event_region(
-    user_event_df=user_event,
-    event_df=events,
-    event_region='г Москва'
-)
-
-print(user_event.info())
-print(user_event.head())
