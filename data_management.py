@@ -5,6 +5,9 @@ from typing import List, Union, Optional
 path_input = input('Введите путь к исходным файлам: ')
 path_work = input('Введите путь к промежуточным файлам: ')
 path_output = input('Введите путь к итоговым файлам: ')
+user_rgn = int(input('Введите регион пользователя: '))
+org_rgn = input('Введите регион организатора: ')
+user_ag = int(input('Введите возвраст пользователя: '))
 
 REGION_FILE_PATH = path_input + '/region.txt'
 REGION_NUMS_FILE_PATH = path_input + '/RegionRussia.csv'
@@ -209,12 +212,12 @@ users = get_user_dataframe()
 user_event = filter_user_event_df_by_user_age(
     user_event_df=user_event,
     user_df=users,
-    user_age=16
+    user_age=user_ag
 )
 user_event = filter_user_event_by_user_region(
     user_event_df=user_event,
     user_df=users,
-    user_region=77
+    user_region=user_rgn
 )
 
 events = get_events_dataframe()
@@ -222,7 +225,7 @@ events = get_events_dataframe()
 user_event = filter_user_event_by_event_region(
     user_event_df=user_event,
     event_df=events,
-    event_region='г Москва'
+    event_region=org_rgn#'г Москва'
 )
 
 print(user_event.info())
