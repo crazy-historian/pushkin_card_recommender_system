@@ -231,4 +231,4 @@ user_event = filter_user_event_by_event_region(
 print(user_event.info())
 print(user_event.head())
 
-user_event.to_csv(path_output + 'user_event.csv', sep=';', index=False)
+user_event.to_csv(path_output + '/user_event.csv', sep=';', index=False)
