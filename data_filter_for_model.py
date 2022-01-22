@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import List, Union, Optional
 
 path_input = input('Введите путь к исходным файлам: ')
-path_work = input('Введите путь к промежуточным файлам: ')
+#path_work = input('Введите путь к промежуточным файлам: ')
 path_output = input('Введите путь к итоговым файлам: ')
 user_rgn = int(input('Введите регион пользователя: '))
 org_rgn = input('Введите регион организатора: ')
@@ -230,3 +230,5 @@ user_event = filter_user_event_by_event_region(
 
 print(user_event.info())
 print(user_event.head())
+
+user_event.to_csv(path_output + 'user_event.csv', sep=';', index=False)
