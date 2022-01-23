@@ -5,9 +5,15 @@ from typing import List, Union, Optional
 path_input = input('Введите путь к исходным файлам: ')
 #path_work = input('Введите путь к промежуточным файлам: ')
 path_output = input('Введите путь к итоговым файлам: ')
-user_rgn = int(input('Введите регион пользователя: '))
-org_rgn = input('Введите регион организатора: ')
-user_ag = int(input('Введите возвраст пользователя: '))
+user_rgn = input('Введите регион пользователя или "все" для выборки пользователей всех регионов: ')
+org_rgn = input('Введите регион организатора словами, например "г Москва" или "все" для выборки организаторов всех регионов: ')
+user_ag = input('Введите возвраст пользователя или "все" для выборки пользователей всех возрастов: ')
+
+if user_ag != 'все':
+    user_ag = int(user_ag)
+
+if user_rgn != 'все':
+    user_rgn = int(user_rgn)
 
 REGION_FILE_PATH = path_input + '/region.txt'
 REGION_NUMS_FILE_PATH = path_input + '/RegionRussia.csv'
@@ -209,24 +215,28 @@ def filter_user_event_by_event_region(
 user_event = get_user_event_dataframe()
 users = get_user_dataframe()
 
-user_event = filter_user_event_df_by_user_age(
-    user_event_df=user_event,
-    user_df=users,
-    user_age=user_ag
-)
-user_event = filter_user_event_by_user_region(
-    user_event_df=user_event,
-    user_df=users,
-    user_region=user_rgn
-)
+if user_ag != 'все':
+    user_event = filter_user_event_df_by_user_age(
+        user_event_df=user_event,
+        user_df=users,
+        user_age=user_ag
+    )
+
+if user_rgn != 'все':
+    user_event = filter_user_event_by_user_region(
+        user_event_df=user_event,
+        user_df=users,
+        user_region=user_rgn
+    )
 
 events = get_events_dataframe()
 
-user_event = filter_user_event_by_event_region(
-    user_event_df=user_event,
-    event_df=events,
-    event_region=org_rgn#'г Москва'
-)
+if org_rgn != 'все':
+    user_event = filter_user_event_by_event_region(
+        user_event_df=user_event,
+        event_df=events,
+        event_region=org_rgn
+    )
 
 print(user_event.info())
 print(user_event.head())
