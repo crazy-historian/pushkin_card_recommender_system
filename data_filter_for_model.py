@@ -135,8 +135,8 @@ def get_clicks_dataframe() -> pd.DataFrame:
                                   'user_phone_details',
                                   'user_phone_details_id',
                                   'user_phone_details_id_2',
-                                  'session_identity',
-                                  'session_name',
+                                  'event_identity',
+                                  'event_name',
                                   'organization_name',
                                   'Org_region_number', 'org_category', 'age'
                                   ])
