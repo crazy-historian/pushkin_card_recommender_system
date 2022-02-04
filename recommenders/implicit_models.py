@@ -28,6 +28,7 @@ class EventRecommender:
 
         user_number_per_id = user_event_df.loc[:, ['user_num', 'user_id']].drop_duplicates()
         self.user_number_per_id = dict(zip(user_number_per_id.user_num, user_number_per_id.user_id))
+        self.user_id_per_number = dict(zip(user_number_per_id.user_id, user_number_per_id.user_num))
 
         self.sparse_event_user = sparse.csr_matrix(
             (self.user_event['clicks_count'].astype(float), (self.user_event['event_id'], self.user_event['user_num']))
@@ -59,6 +60,14 @@ class EventRecommender:
             for item in recommended:
                 recommendations.append([self.user_number_per_id[user_num], *item])
         self.recommendations = pd.DataFrame(recommendations, columns=['user_id', 'event_id', 'score'])
+
+    def get_quick_user_recommendation(self, user_id: str, number=10) -> Optional[pd.DataFrame]:
+        user_num = self.user_id_per_number[user_id]
+        recommendations = list()
+        recommended = self.model.recommend(user_num, self.sparse_user_event, N=number)
+        for item in recommended:
+            recommendations.append([self.user_number_per_id[user_num], *item])
+        return pd.DataFrame(recommendations, columns=['user_id', 'event_id', 'score'])
 
     def get_user_recommendation(self, user_id: str) -> Optional[pd.DataFrame]:
         """
