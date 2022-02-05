@@ -16,25 +16,33 @@ class EventRecommender:
     def __init__(self, user_event_df: pd.DataFrame, model_name: str = 'als'):
         """
         :param user_event_df: a pandas Dataframe witch the following columns:
-         +---------+----------+---------+------------+---------------+
-        | user_id | user_num | event_id | event_name | clicks_count  |
-        +---------+----------+---------+------------+---------------+
+         +---------+----------+-----------+--------------+
+        | user_id | event_id | event_name | clicks_count |
+        +---------+----------+-----------+--------------+
 
         :param model_name: 'als' for Alternative Least Squares or 'bpr' for Bayesian Personalized Ranking
 
         """
         self.recommendations = None
         self.user_event = user_event_df
+        self.user_event['event_id'] = self.user_event['event_id'].astype('category')
+        self.user_event['user_id'] = self.user_event['user_id'].astype('category')
+        self.user_event['user_num'] = self.user_event['user_id'].cat.codes
+        self.user_event['event_num'] = self.user_event['event_id'].cat.codes
 
         user_number_per_id = user_event_df.loc[:, ['user_num', 'user_id']].drop_duplicates()
         self.user_number_per_id = dict(zip(user_number_per_id.user_num, user_number_per_id.user_id))
         self.user_id_per_number = dict(zip(user_number_per_id.user_id, user_number_per_id.user_num))
 
+        event_number_per_id = user_event_df.loc[:, ['event_num', 'event_id']].drop_duplicates()
+        self.event_number_per_id = dict(zip(event_number_per_id.event_num, event_number_per_id.event_id))
+        self.event_id_per_number = dict(zip(event_number_per_id.event_id, event_number_per_id.event_num))
+
         self.sparse_event_user = sparse.csr_matrix(
-            (self.user_event['clicks_count'].astype(float), (self.user_event['event_id'], self.user_event['user_num']))
+            (self.user_event['clicks_count'].astype(float), (self.user_event['event_num'], self.user_event['user_num']))
         )
         self.sparse_user_event = sparse.csr_matrix(
-            (self.user_event['clicks_count'].astype(float), (self.user_event['user_num'], self.user_event['event_id']))
+            (self.user_event['clicks_count'].astype(float), (self.user_event['user_num'], self.user_event['event_num']))
         )
 
         if model_name == 'als':
@@ -58,7 +66,12 @@ class EventRecommender:
         for user_num in range(len(self.user_number_per_id)):
             recommended = self.model.recommend(user_num, self.sparse_user_event)
             for item in recommended:
-                recommendations.append([self.user_number_per_id[user_num], *item])
+                event_num, event_score = item
+                recommendations.append([
+                        self.user_number_per_id[user_num],
+                        self.event_number_per_id[event_num],
+                        event_score
+                    ])
         self.recommendations = pd.DataFrame(recommendations, columns=['user_id', 'event_id', 'score'])
 
     def get_quick_user_recommendation(self, user_id: str, number=10) -> Optional[pd.DataFrame]:
@@ -66,7 +79,12 @@ class EventRecommender:
         recommendations = list()
         recommended = self.model.recommend(user_num, self.sparse_user_event, N=number)
         for item in recommended:
-            recommendations.append([self.user_number_per_id[user_num], *item])
+            event_num, event_score = item
+            recommendations.append([
+                self.user_number_per_id[user_num],
+                self.event_number_per_id[event_num],
+                event_score
+            ])
         return pd.DataFrame(recommendations, columns=['user_id', 'event_id', 'score'])
 
     def get_user_recommendation(self, user_id: str) -> Optional[pd.DataFrame]:
