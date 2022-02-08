@@ -9,6 +9,7 @@ CLICK_FILE_PATH = './dataset/users_and_purchases/click.txt'
 EXPANDED_CLICK_FILE_PATH = './dataset/cliks_add.csv'
 
 ALL_EVENTS_FILE_PATH = './dataset/users_and_purchases/events/events_pushka_accepted_30122021.csv'
+FUTURE_EVENTS = './dataset/users_and_purchases/events/events.csv'
 ORGANIZATIONS_FILE_PATH = './dataset/users_and_purchases/events/organizations.csv'
 
 DOWNLOAD_DATE = '2021-11-15'
@@ -211,3 +212,10 @@ def filter_user_event_by_event_region(
     event_id_set = set(event_by_region.event_id)
     user_event = user_event_df.loc[user_event_df['event_id'].isin(event_id_set)]
     return user_event
+
+
+def get_extra_events_ids(user_event_df: pd.DataFrame) -> list[int]:
+    event_ids = set(user_event_df['event_id'])
+    future_events_df = pd.read_csv(FUTURE_EVENTS, sep=';')
+    future_events_ids = set(future_events_df['ID'])
+    return list(event_ids.difference(future_events_ids))
