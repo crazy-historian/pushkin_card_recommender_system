@@ -2,10 +2,10 @@ import json
 import pandas as pd
 import scipy.sparse as sparse
 
+from tqdm import tqdm
 from typing import Optional
 from implicit.als import AlternatingLeastSquares
 from implicit.bpr import BayesianPersonalizedRanking
-from implicit.nearest_neighbours import bm25_weight
 
 
 class EventRecommender:
@@ -13,14 +13,15 @@ class EventRecommender:
     An interface for ALS and BPR recommender models from implicit python module.
     """
 
-    def __init__(self, user_event_df: pd.DataFrame, model_name: str = 'als'):
+    def __init__(self, user_event_df: pd.DataFrame, extra_event_ids: list[int] = None, model_name: str = 'als'):
         """
         :param user_event_df: a pandas Dataframe witch the following columns:
-         +---------+----------+-----------+--------------+
-        | user_id | event_id | event_name | clicks_count |
-        +---------+----------+-----------+--------------+
+         +---------+----------+-------------+
+        | user_id | event_id | clicks_count |
+        +---------+----------+--------------+
 
         :param model_name: 'als' for Alternative Least Squares or 'bpr' for Bayesian Personalized Ranking
+        :param extra_event_ids: a list of  extra item ids to filter out from the output
 
         """
         self.recommendations = None
@@ -37,6 +38,11 @@ class EventRecommender:
         event_number_per_id = user_event_df.loc[:, ['event_num', 'event_id']].drop_duplicates()
         self.event_number_per_id = dict(zip(event_number_per_id.event_num, event_number_per_id.event_id))
         self.event_id_per_number = dict(zip(event_number_per_id.event_id, event_number_per_id.event_num))
+
+        if extra_event_ids is not None:
+            self.extra_event_ids = [self.event_id_per_number[event_id] for event_id in extra_event_ids]
+        else:
+            self.extra_event_ids = None
 
         self.sparse_event_user = sparse.csr_matrix(
             (self.user_event['clicks_count'].astype(float), (self.user_event['event_num'], self.user_event['user_num']))
@@ -59,25 +65,32 @@ class EventRecommender:
 
     def prepare_recommendations(self) -> None:
         """
-        Calculate recommendation for all users with the default parameters for implicit.<model>.recommend method
+        Calculates recommendation for all users with the default parameters for implicit.<model>.recommend method and
+        saves it as pd.Dataframe
         :return:
         """
         recommendations = list()
         for user_num in range(len(self.user_number_per_id)):
-            recommended = self.model.recommend(user_num, self.sparse_user_event)
+            recommended = self.model.recommend(user_num, self.sparse_user_event, filter_items=self.extra_event_ids)
             for item in recommended:
                 event_num, event_score = item
                 recommendations.append([
-                        self.user_number_per_id[user_num],
-                        self.event_number_per_id[event_num],
-                        event_score
-                    ])
+                    self.user_number_per_id[user_num],
+                    self.event_number_per_id[event_num],
+                    event_score
+                ])
         self.recommendations = pd.DataFrame(recommendations, columns=['user_id', 'event_id', 'score'])
 
     def get_quick_user_recommendation(self, user_id: str, number=10) -> Optional[pd.DataFrame]:
+        """
+        Calculates recommendation for particular user with the default parameters for implicit.<model>.recommend method
+        and saves it as pd.Dataframe
+        :return:
+        """
         user_num = self.user_id_per_number[user_id]
         recommendations = list()
-        recommended = self.model.recommend(user_num, self.sparse_user_event, N=number)
+        recommended = self.model.recommend(user_num, self.sparse_user_event, N=number,
+                                           filter_items=self.extra_event_ids)
         for item in recommended:
             event_num, event_score = item
             recommendations.append([
@@ -127,7 +140,7 @@ class EventRecommender:
     def save_as_json(self, filename):
         """
         Saves recommendation dataframe as .json with following format:
-            { user_id: {
+            {   user_id: {
                     event_1: score_1,
                     event_2: score_2,
                     ...
@@ -140,11 +153,11 @@ class EventRecommender:
         """
         recommendation_dict = dict()
         if self.recommendations is not None:
-            for user_id in list(self.user_number_per_id.values()):
+            for user_id in tqdm(list(self.user_number_per_id.values())):
                 user_rows = self.recommendations.loc[self.recommendations['user_id'] == user_id].values.tolist()
                 rows_dict = dict()
                 for row in user_rows:
-                    rows_dict[row[1]] = row[2]
+                    rows_dict[row[1]] = round(row[2], 2)
                 recommendation_dict[user_id] = rows_dict
 
             with open(filename, 'w') as json_file:
