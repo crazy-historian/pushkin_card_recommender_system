@@ -3,7 +3,7 @@ import pandas as pd
 import scipy.sparse as sparse
 
 from tqdm import tqdm
-from typing import Optional
+from typing import Optional, List
 from implicit.als import AlternatingLeastSquares
 from implicit.bpr import BayesianPersonalizedRanking
 
@@ -13,7 +13,12 @@ class EventRecommender:
     An interface for ALS and BPR recommender models from implicit python module.
     """
 
-    def __init__(self, user_event_df: pd.DataFrame, extra_event_ids: list[int] = None, model_name: str = 'als'):
+    def __init__(self,
+                 user_event_df: pd.DataFrame,
+                 extra_event_ids: List[int] = None,
+                 model_name: str = 'als',
+                 num_of_threads: int = 0,
+                 ):
         """
         :param user_event_df: a pandas Dataframe witch the following columns:
          +---------+----------+-------------+
@@ -54,11 +59,11 @@ class EventRecommender:
         if model_name == 'als':
             params = {'factors': 20, 'regularization': 0.1, 'iterations': 20}
             alpha_val = 15
-            self.model = AlternatingLeastSquares(**params)
+            self.model = AlternatingLeastSquares(**params, num_threads=num_of_threads)
             self.model.fit((self.sparse_event_user * alpha_val).astype('double'))
         elif model_name == 'bpr':
             params = {"factors": 60}
-            self.model = BayesianPersonalizedRanking(**params)
+            self.model = BayesianPersonalizedRanking(**params, num_threads=num_of_threads)
             self.model.fit(self.sparse_event_user)
         else:
             raise ValueError(f'Incorrect value of the model_name argument: {model_name}')
