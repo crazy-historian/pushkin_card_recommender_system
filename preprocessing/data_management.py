@@ -2,15 +2,15 @@ import pandas as pd
 from datetime import datetime
 from typing import List, Union, Optional
 
-REGION_FILE_PATH = './dataset/users_and_purchases/region.txt'
-REGION_NUMS_FILE_PATH = './dataset/RegionRussia.csv'
-USERS_FILE_PATH = './dataset/users_and_purchases/users.txt'
-CLICK_FILE_PATH = './dataset/users_and_purchases/click.txt'
+REGION_FILE_PATH = '../dataset/users_and_purchases/region.txt'
+REGION_NUMS_FILE_PATH = '../dataset/RegionRussia.csv'
+USERS_FILE_PATH = '../dataset/users_and_purchases/users.txt'
+CLICK_FILE_PATH = '../dataset/users_and_purchases/click.txt'
 EXPANDED_CLICK_FILE_PATH = './dataset/cliks_add.csv'
 
-ALL_EVENTS_FILE_PATH = './dataset/users_and_purchases/events/events_pushka_accepted_30122021.csv'
-FUTURE_EVENTS = './dataset/users_and_purchases/events/events.csv'
-ORGANIZATIONS_FILE_PATH = './dataset/users_and_purchases/events/organizations.csv'
+ALL_EVENTS_FILE_PATH = '../dataset/users_and_purchases/events/events_pushka_accepted_30122021.csv'
+FUTURE_EVENTS = '../dataset/users_and_purchases/events/events.csv'
+ORGANIZATIONS_FILE_PATH = '../dataset/users_and_purchases/events/organizations.csv'
 
 DOWNLOAD_DATE = '2021-11-15'
 DOWNLOAD_DATE = datetime.strptime(str(DOWNLOAD_DATE), "%Y-%m-%d")
@@ -162,7 +162,7 @@ def get_user_event_dataframe(
 def filter_user_event_df_by_user_age(
         user_event_df: pd.DataFrame,
         user_df: pd.DataFrame,
-        user_age: Optional[Union[int, list[int]]]
+        user_age: Optional[Union[int, List[int]]]
 ) -> pd.DataFrame:
     if isinstance(user_age, list) and len(user_age) == 2:
         users_by_age = user_df.loc[(user_df['age'] >= user_age[0]) |
@@ -180,7 +180,7 @@ def filter_user_event_df_by_user_age(
 def filter_user_event_by_user_region(
         user_event_df: pd.DataFrame,
         user_df: pd.DataFrame,
-        user_region: Optional[Union[int, list[int]]]
+        user_region: Optional[Union[int, List[int]]]
 ) -> pd.DataFrame:
     if isinstance(user_region, list):
         user_region = set(user_region)
@@ -199,7 +199,7 @@ def filter_user_event_by_user_region(
 def filter_user_event_by_event_region(
         user_event_df: pd.DataFrame,
         event_df: pd.DataFrame,
-        event_region: Optional[Union[str, list[str]]]
+        event_region: Optional[Union[str, List[str]]]
 ) -> pd.DataFrame:
     if isinstance(event_region, list):
         event_region = set(event_region)
@@ -214,7 +214,7 @@ def filter_user_event_by_event_region(
     return user_event
 
 
-def get_extra_events_ids(user_event_df: pd.DataFrame) -> list[int]:
+def get_extra_events_ids(user_event_df: pd.DataFrame) -> List[int]:
     event_ids = set(user_event_df['event_id'])
     future_events_df = pd.read_csv(FUTURE_EVENTS, sep=';')
     future_events_ids = set(future_events_df['ID'])
