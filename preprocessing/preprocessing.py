@@ -1,11 +1,12 @@
 import random
 import pandas as pd
+import numpy as np
 import re
 
 from datetime import datetime
-from typing import Optional
+from typing import List, Union, Optional
 
-from sandbox import config as cfg
+import config as cfg
 
 
 def get_region_code(region_name: str, region_numbers: dict) -> Optional[int]:
@@ -164,8 +165,31 @@ def get_merged_click_event_dataframe(events_dataframe: pd.DataFrame,
 
     return clicks_add
 
+def request_cleaning(request_data_path: str) -> pd.DataFrame:
+    dataset = pd.read_json(request_data_path, encoding='utf-8')
+    dataset.rename(columns={'_id': 'session_id'}, inplace=True)
+    dataset['category'] = dataset['category'].apply(lambda x: x['name'])
+    dataset['genre'] = dataset['extraFields'].dropna().apply(lambda x: x['genre'] if 'genre' in x.keys() else np.nan)
+    dataset.fillna(value={'genre': ""}, inplace=True)
+    dataset.drop('extraFields', axis=1, inplace=True)
+
+    #dataset = dataset.explode('tags', ignore_index=True)
+
+    #dataset['tag_id'] = dataset['tags'].dropna().apply(lambda x: x['_id'] if '_id' in x.keys() else np.nan)
+    #dataset['tag_name'] = dataset['tags'].dropna().apply(lambda x: x['name'] if 'name' in x.keys() else np.nan)
+
+    #dataset.drop('tags', axis=1, inplace=True)
+
+    return dataset
+
+def get_merged_click_add_request(request_dataframe: pd.DataFrame,
+                                 click_dataframe: pd.DataFrame) -> pd.DataFrame:
+    click_add_request = pd.merge(click_dataframe, request_dataframe, on='session_id', how='left')
+    click_add_request['type'] = click_add_request[['type', 'genre']].apply(lambda x: '_'.join(x), axis=1)
+    return click_add_request
+
 def save_to_csv(dataframe: pd.DataFrame, path: str):
-    dataframe.to_csv(path + 'cliks_add_3.csv', sep=';', index=False)
+    dataframe.to_csv(path + 'cliks_add_request.csv', sep=';', index=False)
 
 if __name__ == "__main__":
     random.seed(43)
@@ -186,7 +210,11 @@ if __name__ == "__main__":
     all_events_file = cfg.ALL_EVENTS_FILE_PATH
     events = get_event_dataframe(events_file, all_events_file, organizations)
 
-    full_dataframe = get_merged_click_event_dataframe(events, clicks, organizations, users_full)
+    request = request_cleaning(cfg.REQUEST_FILE_PATH)
+
+    click_add_dataframe = get_merged_click_event_dataframe(events, clicks, organizations, users_full)
+
+    full_dataframe = get_merged_click_add_request(request, click_add_dataframe)
 
     path = cfg.MAIN_PATH
     save_to_csv(full_dataframe, path)
