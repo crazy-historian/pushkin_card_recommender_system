@@ -214,8 +214,29 @@ def filter_user_event_by_event_region(
     return user_event
 
 
+def numerate_user_event_df(user_event_df: pd.DataFrame) -> pd.DataFrame:
+    user_event_df['event_id'] = user_event_df['event_id'].astype('category')
+    user_event_df['user_id'] = user_event_df['user_id'].astype('category')
+    user_event_df['user_num'] = user_event_df['user_id'].cat.codes
+    user_event_df['event_num'] = user_event_df['event_id'].cat.codes
+    return user_event_df
+
+
 def get_extra_events_ids(user_event_df: pd.DataFrame) -> List[int]:
     event_ids = set(user_event_df['event_id'])
     future_events_df = pd.read_csv(FUTURE_EVENTS, sep=';')
     future_events_ids = set(future_events_df['ID'])
     return list(event_ids.difference(future_events_ids))
+
+
+def filter_user_event_df(
+        user_event_df: pd.DataFrame,
+        users_df: pd.DataFrame,
+        events_df: pd.DataFrame,
+        user_region_code: int,
+        event_region_name: str) -> pd.DataFrame:
+    return (
+        user_event_df.
+        pipe(filter_user_event_by_user_region, users_df, user_region_code).
+        pipe(filter_user_event_by_event_region, events_df, event_region_name)
+    )

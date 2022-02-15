@@ -1,148 +1,123 @@
+import csv
 import json
 import pandas as pd
 import scipy.sparse as sparse
 
 from tqdm import tqdm
-from typing import Optional, List
+from bidict import bidict
+from typing import Optional, List, Union
 from implicit.als import AlternatingLeastSquares
 from implicit.bpr import BayesianPersonalizedRanking
 
 
-class EventRecommender:
+class UserItemRecommender:
     """
     An interface for ALS and BPR recommender models from implicit python module.
     """
 
     def __init__(self,
-                 user_event_df: pd.DataFrame,
-                 extra_event_ids: List[int] = None,
-                 model_name: str = 'als',
+                 user_item_df: pd.DataFrame,
+                 extra_item_ids: List[int] = None,
                  num_of_threads: int = 0,
                  ):
         """
-        :param user_event_df: a pandas Dataframe witch the following columns:
-         +---------+----------+-------------+
-        | user_id | event_id | clicks_count |
-        +---------+----------+--------------+
-
-        :param model_name: 'als' for Alternative Least Squares or 'bpr' for Bayesian Personalized Ranking
-        :param extra_event_ids: a list of  extra item ids to filter out from the output
+        :param user_item_df: a pandas Dataframe witch the following columns:
+        +---------+---------+--------+----------+----------+
+        | user_id | item_id | rating | user_num | item_num |
+        +---------+---------+--------+----------+----------+
+        :param extra_item_ids: a list of  extra item ids to filter out from the output
 
         """
-        self.recommendations = None
-        self.user_event = user_event_df
-        self.user_event['event_id'] = self.user_event['event_id'].astype('category')
-        self.user_event['user_id'] = self.user_event['user_id'].astype('category')
-        self.user_event['user_num'] = self.user_event['user_id'].cat.codes
-        self.user_event['event_num'] = self.user_event['event_id'].cat.codes
+        self.model = None
+        self.recommendations = list()
+        self.user_item = user_item_df
+        self.num_of_threads = num_of_threads
 
-        user_number_per_id = user_event_df.loc[:, ['user_num', 'user_id']].drop_duplicates()
-        self.user_number_per_id = dict(zip(user_number_per_id.user_num, user_number_per_id.user_id))
-        self.user_id_per_number = dict(zip(user_number_per_id.user_id, user_number_per_id.user_num))
+        user_number_per_id = user_item_df.loc[:, ['user_num', 'user_id']].drop_duplicates()
+        self.user_number_per_id = bidict(dict(zip(user_number_per_id.user_id, user_number_per_id.user_num)))
 
-        event_number_per_id = user_event_df.loc[:, ['event_num', 'event_id']].drop_duplicates()
-        self.event_number_per_id = dict(zip(event_number_per_id.event_num, event_number_per_id.event_id))
-        self.event_id_per_number = dict(zip(event_number_per_id.event_id, event_number_per_id.event_num))
+        item_number_per_id = user_item_df.loc[:, ['item_num', 'item_id']].drop_duplicates()
+        self.item_number_per_id = bidict(dict(zip(item_number_per_id.item_id, item_number_per_id.item_num)))
 
-        if extra_event_ids is not None:
-            self.extra_event_ids = [self.event_id_per_number[event_id] for event_id in extra_event_ids]
+        self.sparse_item_user = sparse.csr_matrix(
+            (self.user_item['rating'].astype(float), (self.user_item['item_num'], self.user_item['user_num']))
+        )
+        self.sparse_user_item = sparse.csr_matrix(
+            (self.user_item['rating'].astype(float), (self.user_item['user_num'], self.user_item['item_num']))
+        )
+
+        if extra_item_ids is not None:
+            self.extra_item_ids = [self.item_number_per_id[item_id] for item_id in extra_item_ids]
         else:
-            self.extra_event_ids = None
+            self.extra_item_ids = None
 
-        self.sparse_event_user = sparse.csr_matrix(
-            (self.user_event['clicks_count'].astype(float), (self.user_event['event_num'], self.user_event['user_num']))
-        )
-        self.sparse_user_event = sparse.csr_matrix(
-            (self.user_event['clicks_count'].astype(float), (self.user_event['user_num'], self.user_event['event_num']))
-        )
+    def fit(self, model_name: str = 'als', **model_params) -> None:
+        """
+        Fit the model with passed parameters
 
+        :param model_name: 'als' for Alternative Least Squares or 'bpr' for Bayesian Personalized Ranking
+        :return:
+        """
         if model_name == 'als':
-            params = {'factors': 20, 'regularization': 0.1, 'iterations': 20}
+            # params = {'factors': 20, 'regularization': 0.1, 'iterations': 20}
             alpha_val = 15
-            self.model = AlternatingLeastSquares(**params, num_threads=num_of_threads)
-            self.model.fit((self.sparse_event_user * alpha_val).astype('double'))
+            self.model = AlternatingLeastSquares(**model_params, num_threads=self.num_of_threads)
+            self.model.fit((self.sparse_item_user * alpha_val).astype('double'))
         elif model_name == 'bpr':
-            params = {"factors": 60}
-            self.model = BayesianPersonalizedRanking(**params, num_threads=num_of_threads)
-            self.model.fit(self.sparse_event_user)
+            # params = {"factors": 60}
+            self.model = BayesianPersonalizedRanking(**model_params, num_threads=self.num_of_threads)
+            self.model.fit(self.sparse_item_user)
         else:
             raise ValueError(f'Incorrect value of the model_name argument: {model_name}')
 
-    def prepare_recommendations(self) -> None:
+    def get_user_recommendation(self, user_id: str) -> list:
         """
-        Calculates recommendation for all users with the default parameters for implicit.<model>.recommend method and
-        saves it as pd.Dataframe
+        Calculates recommendation for user with the default parameters for implicit.<model>.recommend method and
+        saves it as list
+        :param user_id: string value of user id from source data
         :return:
         """
+        user_num = self.user_number_per_id[user_id]
+        recommended = self.model.recommend(user_num, self.sparse_user_item, filter_items=self.extra_item_ids)
         recommendations = list()
-        for user_num in range(len(self.user_number_per_id)):
-            recommended = self.model.recommend(user_num, self.sparse_user_event, filter_items=self.extra_event_ids)
-            for item in recommended:
-                event_num, event_score = item
-                recommendations.append([
-                    self.user_number_per_id[user_num],
-                    self.event_number_per_id[event_num],
-                    event_score
-                ])
-        self.recommendations = pd.DataFrame(recommendations, columns=['user_id', 'event_id', 'score'])
-
-    def get_quick_user_recommendation(self, user_id: str, number=10) -> Optional[pd.DataFrame]:
-        """
-        Calculates recommendation for particular user with the default parameters for implicit.<model>.recommend method
-        and saves it as pd.Dataframe
-        :return:
-        """
-        user_num = self.user_id_per_number[user_id]
-        recommendations = list()
-        recommended = self.model.recommend(user_num, self.sparse_user_event, N=number,
-                                           filter_items=self.extra_event_ids)
         for item in recommended:
             event_num, event_score = item
             recommendations.append([
-                self.user_number_per_id[user_num],
-                self.event_number_per_id[event_num],
+                user_id,
+                self.item_number_per_id.inverse[event_num],
                 event_score
             ])
-        return pd.DataFrame(recommendations, columns=['user_id', 'event_id', 'score'])
+        return recommendations
 
-    def get_user_recommendation(self, user_id: str) -> Optional[pd.DataFrame]:
+    def get_all_recommendation(self, as_pd_dataframe: bool = True) -> Union[list, pd.DataFrame]:
         """
-        Returns recommendation for particular user with the passed user_id.
-
-        :return: pd.Dataframe or None if recommendation was not prepared.
+        Calculates recommendation for all users with the default parameters for implicit.<model>.recommend method and
+        saves it as list or pd.Dataframe
+        :param as_pd_dataframe: boolean flag, if True -- return as a pd.Dataframe, otherwise as a list
+        :return:
         """
-        if self.recommendations is not None:
-            return self.recommendations.loc[self.recommendations['user_id'] == user_id]
+        for user_num in tqdm(self.user_number_per_id.keys()):
+            self.recommendations.extend(self.get_user_recommendation(user_num))
+        if as_pd_dataframe:
+            return pd.DataFrame(self.recommendations, columns=['user_id', 'item_id', 'rating'])
         else:
-            return None
+            return self.recommendations
 
-    def get_users_interested_in_event(self, event_id: int, n_users: int = 10) -> Optional[pd.DataFrame]:
-        """
-        Returns n_users most interested in the event with the passed event_id
-
-       :return: pd.Dataframe or None if recommendation was not prepared.
-        """
-        if self.recommendations is not None:
-            return self.recommendations.loc[
-                       self.recommendations['event_id'] == event_id
-                       ].sort_values(by='score', ascending=False)[:n_users]
-        else:
-            return None
-
-    def save_as_csv(self, filename: str) -> bool:
+    def to_csv(self, filename: str) -> None:
         """
         Saves recommendation dataframe as .csv without changes
 
         :param filename: target .csv full filename
         :return: boolean value
         """
-        if self.recommendations is not None:
-            self.recommendations.to_csv(filename)
-            return True
-        else:
-            return False
+        if self.recommendations is None:
+            self.get_all_recommendation(as_pd_dataframe=False)
+        with open(f"{filename}.csv", 'w', newline='') as file:
+            writer = csv.writer(file, delimiter=';')
+            writer.writerow(['user_id', 'event_id', 'rating'])
+            writer.writerows(self.recommendations)
 
-    def save_as_json(self, filename):
+    def to_json(self, filename) -> None:
         """
         Saves recommendation dataframe as .json with following format:
             {   user_id: {
@@ -157,13 +132,18 @@ class EventRecommender:
         :return: boolean value
         """
         recommendation_dict = dict()
-        if self.recommendations is not None:
-            for user_id in tqdm(list(self.user_number_per_id.values())):
-                user_rows = self.recommendations.loc[self.recommendations['user_id'] == user_id].values.tolist()
-                rows_dict = dict()
-                for row in user_rows:
-                    rows_dict[row[1]] = round(row[2], 2)
-                recommendation_dict[user_id] = rows_dict
+        if self.recommendations is None:
+            self.get_all_recommendation(as_pd_dataframe=False)
 
-            with open(filename, 'w') as json_file:
-                json.dump(recommendation_dict, json_file)
+        current_user_num = self.recommendations[0][0]
+        user_rec_dict = dict()
+        for row in tqdm(self.recommendations):
+            if row[0] != current_user_num:
+                recommendation_dict[current_user_num] = user_rec_dict
+                user_rec_dict = dict()
+                current_user_num = row[0]
+            else:
+                user_rec_dict[row[1]] = round(float(row[2]), 3)
+
+        with open(f'{filename}.json', 'w') as json_file:
+            json.dump(recommendation_dict, json_file)

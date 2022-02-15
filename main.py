@@ -14,7 +14,7 @@ if __name__ == "__main__":
         extra_event_ids = dm.get_extra_events_ids(user_event_df)
 
         print('\t - preparing recommendations.')
-        recommender = EventRecommender(user_event_df, extra_event_ids=extra_event_ids, model_name='als')
+        recommender = EventRecommender(user_event_df, extra_item_ids=extra_event_ids, model_name='als')
         recommender.prepare_recommendations()
 
         print('\t - saving as .json.')
