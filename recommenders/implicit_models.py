@@ -5,19 +5,21 @@ import scipy.sparse as sparse
 
 from tqdm import tqdm
 from bidict import bidict
+from abc import abstractmethod, ABC
 from typing import Optional, List, Union
 from implicit.als import AlternatingLeastSquares
 from implicit.bpr import BayesianPersonalizedRanking
+from implicit.nearest_neighbours import bm25_weight
 
 
-class UserItemRecommender:
+class UserItemRecommender(ABC):
     """
     An interface for ALS and BPR recommender models from implicit python module.
     """
 
     def __init__(self,
-                 user_item_df: pd.DataFrame,
-                 extra_item_ids: List[int] = None,
+                 # user_item_df: pd.DataFrame,
+                 # extra_item_ids: List[int] = None,
                  num_of_threads: int = 0,
                  ):
         """
@@ -30,13 +32,28 @@ class UserItemRecommender:
         """
         self.model = None
         self.recommendations = list()
-        self.user_item = user_item_df
+        self.user_item = None
+        self.extra_item_ids = None
+
+        self.user_number_per_id = None
+        self.item_number_per_id = None
+        self.sparse_item_user = None
+        self.sparse_user_item = None
+
         self.num_of_threads = num_of_threads
 
-        user_number_per_id = user_item_df.loc[:, ['user_num', 'user_id']].drop_duplicates()
+    @abstractmethod
+    def fit(self, user_item_df: pd.DataFrame, extra_items_ids: Optional[List[int]] = None, *args, **kwargs) -> None:
+        """
+        Fitting the model with passed parameters
+        """
+        self.user_item = user_item_df
+        self.extra_item_ids = extra_items_ids
+
+        user_number_per_id = self.user_item.loc[:, ['user_num', 'user_id']].drop_duplicates()
         self.user_number_per_id = bidict(dict(zip(user_number_per_id.user_id, user_number_per_id.user_num)))
 
-        item_number_per_id = user_item_df.loc[:, ['item_num', 'item_id']].drop_duplicates()
+        item_number_per_id = self.user_item.loc[:, ['item_num', 'item_id']].drop_duplicates()
         self.item_number_per_id = bidict(dict(zip(item_number_per_id.item_id, item_number_per_id.item_num)))
 
         self.sparse_item_user = sparse.csr_matrix(
@@ -46,39 +63,25 @@ class UserItemRecommender:
             (self.user_item['rating'].astype(float), (self.user_item['user_num'], self.user_item['item_num']))
         )
 
-        if extra_item_ids is not None:
-            self.extra_item_ids = [self.item_number_per_id[item_id] for item_id in extra_item_ids]
+        if self.extra_item_ids is not None:
+            self.extra_item_ids = [self.item_number_per_id[item_id] for item_id in self.extra_item_ids]
         else:
             self.extra_item_ids = None
 
-    def fit(self, model_name: str = 'als', **model_params) -> None:
-        """
-        Fit the model with passed parameters
-
-        :param model_name: 'als' for Alternative Least Squares or 'bpr' for Bayesian Personalized Ranking
-        :return:
-        """
-        if model_name == 'als':
-            # params = {'factors': 20, 'regularization': 0.1, 'iterations': 20}
-            alpha_val = 15
-            self.model = AlternatingLeastSquares(**model_params, num_threads=self.num_of_threads)
-            self.model.fit((self.sparse_item_user * alpha_val).astype('double'))
-        elif model_name == 'bpr':
-            # params = {"factors": 60}
-            self.model = BayesianPersonalizedRanking(**model_params, num_threads=self.num_of_threads)
-            self.model.fit(self.sparse_item_user)
-        else:
-            raise ValueError(f'Incorrect value of the model_name argument: {model_name}')
-
-    def get_user_recommendation(self, user_id: str) -> list:
+    def get_user_recommendation(self,
+                                user_id: str,
+                                N: int = 10,
+                                as_pd_dataframe: bool = True) -> Union[list, pd.DataFrame]:
         """
         Calculates recommendation for user with the default parameters for implicit.<model>.recommend method and
         saves it as list
+        :param as_pd_dataframe:
+        :param N:  number of recommended items
         :param user_id: string value of user id from source data
         :return:
         """
         user_num = self.user_number_per_id[user_id]
-        recommended = self.model.recommend(user_num, self.sparse_user_item, filter_items=self.extra_item_ids)
+        recommended = self.model.recommend(user_num, self.sparse_user_item, filter_items=self.extra_item_ids, N=N)
         recommendations = list()
         for item in recommended:
             event_num, event_score = item
@@ -87,7 +90,10 @@ class UserItemRecommender:
                 self.item_number_per_id.inverse[event_num],
                 event_score
             ])
-        return recommendations
+        if as_pd_dataframe:
+            return pd.DataFrame(self.recommendations, columns=['user_id', 'item_id', 'rating'])
+        else:
+            return recommendations
 
     def get_all_recommendation(self, as_pd_dataframe: bool = True) -> Union[list, pd.DataFrame]:
         """
@@ -147,3 +153,66 @@ class UserItemRecommender:
 
         with open(f'{filename}.json', 'w') as json_file:
             json.dump(recommendation_dict, json_file)
+
+
+class ALSRecommender(UserItemRecommender):
+    def __init__(self,
+                 factors: Optional[int] = 20,
+                 regularization: Optional[float] = 0.1,
+                 iterations: Optional[int] = 100,
+                 confidence: Optional[str] = None,
+                 alpha_value: Optional[int] = None,
+                 K1: Optional[int] = None,
+                 B: Optional[float] = None,
+                 num_of_threads: int = 0,
+                 ):
+        super().__init__(
+            num_of_threads
+        )
+        self.factors = factors
+        self.regularization = regularization
+        self.iterations = iterations
+        self.confidence = confidence
+        self.alpha_value = alpha_value
+        self.K1 = K1
+        self.B = B
+
+    def fit(self, user_item_df: pd.DataFrame, extra_item_ids: Optional[List[int]] = None, *args, **kwargs) -> None:
+        super().fit(user_item_df, extra_item_ids, args, kwargs)
+        self.model = AlternatingLeastSquares(
+            factors=self.factors,
+            regularization=self.regularization,
+            iterations=self.iterations,
+            num_threads=self.num_of_threads)
+        if self.confidence == 'alpha' or self.confidence is None:
+            self.model.fit((self.sparse_item_user * self.alpha_value).astype('double'))
+        elif self.confidence == 'bm25':
+            self.model.fit(bm25_weight(self.sparse_item_user, K1=self.K1, B=self.B))
+
+
+class BPRRecommender(UserItemRecommender):
+    def __init__(self,
+                 factors: Optional[int] = 20,
+                 learning_rate: Optional[float] = None,
+                 regularization: Optional[float] = 0.1,
+                 iterations: Optional[int] = 100,
+                 num_of_threads: int = 0,
+                 ):
+        super().__init__(
+            num_of_threads
+        )
+        self.factors = factors
+        self.learning_rate = learning_rate
+        self.regularization = regularization
+        self.iterations = iterations
+
+    def fit(self, user_item_df: pd.DataFrame, extra_item_ids: Optional[List[int]] = None, *args, **kwargs) -> None:
+        super().fit(user_item_df, extra_item_ids, args, kwargs)
+        self.model = BayesianPersonalizedRanking(
+            factors=self.factors,
+            learning_rate=self.learning_rate,
+            regularization=self.regularization,
+            iterations=self.iterations,
+            num_threads=self.num_of_threads)
+
+        self.model.fit(self.sparse_item_user)

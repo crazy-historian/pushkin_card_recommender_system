@@ -2,15 +2,15 @@ import pandas as pd
 from datetime import datetime
 from typing import List, Union, Optional
 
-REGION_FILE_PATH = '../dataset/users_and_purchases/region.txt'
-REGION_NUMS_FILE_PATH = '../dataset/RegionRussia.csv'
-USERS_FILE_PATH = '../dataset/users_and_purchases/users.txt'
-CLICK_FILE_PATH = '../dataset/users_and_purchases/click.txt'
-EXPANDED_CLICK_FILE_PATH = './dataset/cliks_add.csv'
+REGION_FILE_PATH = '../data/users_and_purchases/region.txt'
+REGION_NUMS_FILE_PATH = '../data/RegionRussia.csv'
+USERS_FILE_PATH = '../data/users_and_purchases/users.txt'
+CLICK_FILE_PATH = '../data/users_and_purchases/click.txt'
+EXPANDED_CLICK_FILE_PATH = './data/cliks_add.csv'
 
-ALL_EVENTS_FILE_PATH = '../dataset/users_and_purchases/events/events_pushka_accepted_30122021.csv'
-FUTURE_EVENTS = '../dataset/users_and_purchases/events/events.csv'
-ORGANIZATIONS_FILE_PATH = '../dataset/users_and_purchases/events/organizations.csv'
+ALL_EVENTS_FILE_PATH = '../data/users_and_purchases/events/events_pushka_accepted_30122021.csv'
+FUTURE_EVENTS = '../data/users_and_purchases/events/events.csv'
+ORGANIZATIONS_FILE_PATH = '../data/users_and_purchases/events/organizations.csv'
 
 DOWNLOAD_DATE = '2021-11-15'
 DOWNLOAD_DATE = datetime.strptime(str(DOWNLOAD_DATE), "%Y-%m-%d")
