@@ -43,7 +43,7 @@ class UserItemRecommender(ABC):
         self.num_of_threads = num_of_threads
 
     @abstractmethod
-    def fit(self, user_item_df: pd.DataFrame, extra_items_ids: Optional[List[int]] = None, *args, **kwargs) -> None:
+    def fit(self, user_item_df: pd.DataFrame, extra_items_ids: Optional[List[int]] = None, show_progress: bool = True, *args, **kwargs) -> None:
         """
         Fitting the model with passed parameters
         """
@@ -91,7 +91,7 @@ class UserItemRecommender(ABC):
                 event_score
             ])
         if as_pd_dataframe:
-            return pd.DataFrame(self.recommendations, columns=['user_id', 'item_id', 'rating'])
+            return pd.DataFrame(recommendations, columns=['user_id', 'item_id', 'rating'])
         else:
             return recommendations
 
@@ -177,23 +177,23 @@ class ALSRecommender(UserItemRecommender):
         self.K1 = K1
         self.B = B
 
-    def fit(self, user_item_df: pd.DataFrame, extra_item_ids: Optional[List[int]] = None, *args, **kwargs) -> None:
-        super().fit(user_item_df, extra_item_ids, args, kwargs)
+    def fit(self, user_item_df: pd.DataFrame, extra_item_ids: Optional[List[int]] = None, show_progress: bool = True, *args, **kwargs) -> None:
+        super().fit(user_item_df, extra_item_ids, show_progress, args, kwargs)
         self.model = AlternatingLeastSquares(
             factors=self.factors,
             regularization=self.regularization,
             iterations=self.iterations,
             num_threads=self.num_of_threads)
         if self.confidence == 'alpha' or self.confidence is None:
-            self.model.fit((self.sparse_item_user * self.alpha_value).astype('double'))
+            self.model.fit((self.sparse_item_user * self.alpha_value).astype('double'), show_progress=show_progress)
         elif self.confidence == 'bm25':
-            self.model.fit(bm25_weight(self.sparse_item_user, K1=self.K1, B=self.B))
+            self.model.fit(bm25_weight(self.sparse_item_user, K1=self.K1, B=self.B), show_progress=show_progress)
 
 
 class BPRRecommender(UserItemRecommender):
     def __init__(self,
                  factors: Optional[int] = 20,
-                 learning_rate: Optional[float] = None,
+                 learning_rate: Optional[float] = 0.01,
                  regularization: Optional[float] = 0.1,
                  iterations: Optional[int] = 100,
                  num_of_threads: int = 0,
@@ -206,8 +206,8 @@ class BPRRecommender(UserItemRecommender):
         self.regularization = regularization
         self.iterations = iterations
 
-    def fit(self, user_item_df: pd.DataFrame, extra_item_ids: Optional[List[int]] = None, *args, **kwargs) -> None:
-        super().fit(user_item_df, extra_item_ids, args, kwargs)
+    def fit(self, user_item_df: pd.DataFrame, extra_item_ids: Optional[List[int]] = None, show_progress: bool = True, *args, **kwargs) -> None:
+        super().fit(user_item_df, extra_item_ids, show_progress, args, kwargs)
         self.model = BayesianPersonalizedRanking(
             factors=self.factors,
             learning_rate=self.learning_rate,
@@ -215,4 +215,4 @@ class BPRRecommender(UserItemRecommender):
             iterations=self.iterations,
             num_threads=self.num_of_threads)
 
-        self.model.fit(self.sparse_item_user)
+        self.model.fit(self.sparse_item_user, show_progress=show_progress)

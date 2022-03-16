@@ -1,5 +1,5 @@
 import pandas as pd
-import preprocessing.data_management as dm
+import pipeline.data_management as dm
 
 from pathlib import Path
 from recommenders.implicit_models import ALSRecommender

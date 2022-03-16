@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from datetime import datetime
 from typing import List, Union, Optional
@@ -61,7 +62,7 @@ def get_user_dataframe(
     return users_full
 
 
-#########################
+####################################################################################################################
 
 def get_region_from_address(address: str) -> str:
     return address.split(',')[0]
@@ -117,7 +118,7 @@ def get_events_dataframe(
     return all_events
 
 
-#########################
+####################################################################################################################
 
 def get_clicks_dataframe(
         clicks_file_path: str
@@ -145,7 +146,7 @@ def get_clicks_dataframe(
     return clicks
 
 
-#########################
+####################################################################################################################
 
 def get_user_event_dataframe(
         user_event_file_path: str
@@ -157,7 +158,7 @@ def get_user_event_dataframe(
     return user_event
 
 
-#########################
+####################################################################################################################
 
 def filter_user_event_df_by_user_age(
         user_event_df: pd.DataFrame,
@@ -237,6 +238,15 @@ def filter_user_event_df(
         event_region_name: str) -> pd.DataFrame:
     return (
         user_event_df.
-        pipe(filter_user_event_by_user_region, users_df, user_region_code).
-        pipe(filter_user_event_by_event_region, events_df, event_region_name)
+            pipe(filter_user_event_by_user_region, users_df, user_region_code).
+            pipe(filter_user_event_by_event_region, events_df, event_region_name)
     )
+
+############################################################################################################
+
+
+def split_df_into_diapasons(df: pd.DataFrame) -> pd.DataFrame:
+    activity = df.groupby('user_id')['clicks_count'].count().sort_values(ascending=False).reset_index()
+    activity['diapason'] = pd.cut(activity['clicks_count'], bins=np.linspace(0, 70, 15),
+                                  labels=[f'({i}:{j}]' for i, j in zip(range(0, 70, 5), range(5, 75, 5))])
+    return activity
