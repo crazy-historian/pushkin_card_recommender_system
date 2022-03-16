@@ -1,16 +1,17 @@
+import numpy as np
 import pandas as pd
 from datetime import datetime
 from typing import List, Union, Optional
 
-REGION_FILE_PATH = '../dataset/users_and_purchases/region.txt'
-REGION_NUMS_FILE_PATH = '../dataset/RegionRussia.csv'
-USERS_FILE_PATH = '../dataset/users_and_purchases/users.txt'
-CLICK_FILE_PATH = '../dataset/users_and_purchases/click.txt'
-EXPANDED_CLICK_FILE_PATH = './dataset/cliks_add.csv'
+REGION_FILE_PATH = '../data/users_and_purchases/region.txt'
+REGION_NUMS_FILE_PATH = '../data/RegionRussia.csv'
+USERS_FILE_PATH = '../data/users_and_purchases/users.txt'
+CLICK_FILE_PATH = '../data/users_and_purchases/click.txt'
+EXPANDED_CLICK_FILE_PATH = './data/cliks_add.csv'
 
-ALL_EVENTS_FILE_PATH = '../dataset/users_and_purchases/events/events_pushka_accepted_30122021.csv'
-FUTURE_EVENTS = '../dataset/users_and_purchases/events/events.csv'
-ORGANIZATIONS_FILE_PATH = '../dataset/users_and_purchases/events/organizations.csv'
+ALL_EVENTS_FILE_PATH = '../data/users_and_purchases/events/events_pushka_accepted_30122021.csv'
+FUTURE_EVENTS = '../data/users_and_purchases/events/events.csv'
+ORGANIZATIONS_FILE_PATH = '../data/users_and_purchases/events/organizations.csv'
 
 DOWNLOAD_DATE = '2021-11-15'
 DOWNLOAD_DATE = datetime.strptime(str(DOWNLOAD_DATE), "%Y-%m-%d")
@@ -61,7 +62,7 @@ def get_user_dataframe(
     return users_full
 
 
-#########################
+####################################################################################################################
 
 def get_region_from_address(address: str) -> str:
     return address.split(',')[0]
@@ -117,7 +118,7 @@ def get_events_dataframe(
     return all_events
 
 
-#########################
+####################################################################################################################
 
 def get_clicks_dataframe(
         clicks_file_path: str
@@ -145,7 +146,7 @@ def get_clicks_dataframe(
     return clicks
 
 
-#########################
+####################################################################################################################
 
 def get_user_event_dataframe(
         user_event_file_path: str
@@ -157,7 +158,7 @@ def get_user_event_dataframe(
     return user_event
 
 
-#########################
+####################################################################################################################
 
 def filter_user_event_df_by_user_age(
         user_event_df: pd.DataFrame,
@@ -214,8 +215,38 @@ def filter_user_event_by_event_region(
     return user_event
 
 
+def numerate_user_event_df(user_event_df: pd.DataFrame) -> pd.DataFrame:
+    user_event_df['event_id'] = user_event_df['event_id'].astype('category')
+    user_event_df['user_id'] = user_event_df['user_id'].astype('category')
+    user_event_df['user_num'] = user_event_df['user_id'].cat.codes
+    user_event_df['event_num'] = user_event_df['event_id'].cat.codes
+    return user_event_df
+
+
 def get_extra_events_ids(user_event_df: pd.DataFrame) -> List[int]:
     event_ids = set(user_event_df['event_id'])
     future_events_df = pd.read_csv(FUTURE_EVENTS, sep=';')
     future_events_ids = set(future_events_df['ID'])
     return list(event_ids.difference(future_events_ids))
+
+
+def filter_user_event_df(
+        user_event_df: pd.DataFrame,
+        users_df: pd.DataFrame,
+        events_df: pd.DataFrame,
+        user_region_code: int,
+        event_region_name: str) -> pd.DataFrame:
+    return (
+        user_event_df.
+            pipe(filter_user_event_by_user_region, users_df, user_region_code).
+            pipe(filter_user_event_by_event_region, events_df, event_region_name)
+    )
+
+############################################################################################################
+
+
+def split_df_into_diapasons(df: pd.DataFrame) -> pd.DataFrame:
+    activity = df.groupby('user_id')['clicks_count'].count().sort_values(ascending=False).reset_index()
+    activity['diapason'] = pd.cut(activity['clicks_count'], bins=np.linspace(0, 70, 15),
+                                  labels=[f'({i}:{j}]' for i, j in zip(range(0, 70, 5), range(5, 75, 5))])
+    return activity
