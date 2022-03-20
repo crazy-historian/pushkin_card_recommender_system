@@ -1,0 +1,40 @@
+Создаём на локальном копьютере папку для работы с моделью, пусть  название будет model.
+
+Инициируем git
+git init
+
+В командной строке в папке model клонируем репозиторий
+git pull https://github.com/crazy-historian/pushkin_card_recommender_system Ruslan-RS-3-1-Pipline
+
+Дальше для корректной работы нужно запустить виртульное окружение
+python3 -m venv venv
+
+Сперва рекомендуется обновить pip
+pip install --upgrade pip
+
+Для установки зависимстей необходимо активировать окружение и выполнить
+pip install -r requirements.txt
+
+Внутри это папки model создаём структуру из папок:
+
+-model
+	- dataset
+		 - input 
+		 - new_df
+		 - result
+		 - user_events_dfs
+
+В папку model/dataset/input складываем входные файлы:
+click.txt , events.csv , events_pushka_accepted_30122021.csv , organizations.csv , 
+region.txt , RegionRussia.csv , tickets.txt , uniq.txt , users.txt
+
+В корневой папке в файле прописываем регионы по которым нам нужны рекомендации:
+в столбце user_region прописываем регион цифрами
+в столбце event_region прописываем регион словами, в формате Респ Татарстан, Свердловская обл
+
+Запускаем файл pipline
+python pipline.py
+
+Как итог работы всех скриптов в папке model/dataset/result появляются файлы json с рекомендациями
+
+
