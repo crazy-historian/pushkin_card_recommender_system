@@ -219,6 +219,8 @@ def get_events_dataframe(
     all_events['category'] = all_events['org_id'].apply(func=get_event_category, categories_dict=org_id_category)
 
     all_events['region_code'] = all_events['region_name'].apply(func=get_region_code_for_event)
+    all_events = all_events.dropna(subset=['region_code'])
+    all_events['region_code'] = all_events['region_code'].astype(int)
     return all_events
 
 

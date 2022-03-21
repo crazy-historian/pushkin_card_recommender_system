@@ -43,13 +43,13 @@ def filter_user_event_by_user_region(
 def filter_user_event_by_event_region(
         user_event_df: pd.DataFrame,
         event_df: pd.DataFrame,
-        event_region: Optional[Union[str, List[str]]]
+        event_region: Optional[Union[int, List[int]]]
 ) -> pd.DataFrame:
     if isinstance(event_region, list):
         event_region = set(event_region)
-        event_by_region = event_df.loc[event_df['region_name'].isin(event_region)]
-    elif isinstance(event_region, str):
-        event_by_region = event_df.loc[event_df['region_name'] == event_region]
+        event_by_region = event_df.loc[event_df['region_code'].isin(event_region)]
+    elif isinstance(event_region, int):
+        event_by_region = event_df.loc[event_df['region_code'] == event_region]
     else:
         raise ValueError("Incorrect value of event_region")
 
@@ -77,11 +77,11 @@ def filter_user_event_df(
         users_df: pd.DataFrame,
         events_df: pd.DataFrame,
         user_region_code: int,
-        event_region_name: str) -> pd.DataFrame:
+        event_region_code: int) -> pd.DataFrame:
     return (
         user_event_df.
             pipe(filter_user_event_by_user_region, users_df, user_region_code).
-            pipe(filter_user_event_by_event_region, events_df, event_region_name)
+            pipe(filter_user_event_by_event_region, events_df, event_region_code)
     )
 
 

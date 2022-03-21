@@ -4,7 +4,6 @@ from pipeline import preprocessing as prs
 
 parser = argparse.ArgumentParser(
     prog='prepare_dataframes',
-    usage='',
     description='Process raw .csv tables and save preprocessed and cleaned tables (user table, events table, \n'
                 'clicks table, future events table and user-event table) as .csv files into target directory'
 )
