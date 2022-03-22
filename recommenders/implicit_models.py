@@ -47,6 +47,7 @@ class UserItemRecommender(ABC):
         """
         Fitting the model with passed parameters
         """
+        print('- fitting the model')
         self.user_item = user_item_df
         self.extra_item_ids = extra_items_ids
 
@@ -84,12 +85,17 @@ class UserItemRecommender(ABC):
         recommended = self.model.recommend(user_num, self.sparse_user_item, filter_items=self.extra_item_ids, N=N)
         recommendations = list()
         for item in recommended:
-            event_num, event_score = item
-            recommendations.append([
-                user_id,
-                self.item_number_per_id.inverse[event_num],
-                event_score
-            ])
+            try:
+                event_num, event_score = item
+                recommendations.append([
+                    user_id,
+                    self.item_number_per_id.inverse[event_num],
+                    event_score
+                ])
+            except KeyError:
+                # TODO: make error description more explicit
+                #  when the number of cultural events is too small, recommender cannot return list of 10 events
+                continue
         if as_pd_dataframe:
             return pd.DataFrame(recommendations, columns=['user_id', 'item_id', 'rating'])
         else:
@@ -102,8 +108,9 @@ class UserItemRecommender(ABC):
         :param as_pd_dataframe: boolean flag, if True -- return as a pd.Dataframe, otherwise as a list
         :return:
         """
+        print('- preparing the list of recommendations')
         for user_num in tqdm(self.user_number_per_id.keys()):
-            self.recommendations.extend(self.get_user_recommendation(user_num))
+            self.recommendations.extend(self.get_user_recommendation(user_num, as_pd_dataframe=False))
         if as_pd_dataframe:
             return pd.DataFrame(self.recommendations, columns=['user_id', 'item_id', 'rating'])
         else:
@@ -116,6 +123,7 @@ class UserItemRecommender(ABC):
         :param filename: target .csv full filename
         :return: boolean value
         """
+        print('- saving as csv')
         if self.recommendations is None:
             self.get_all_recommendation(as_pd_dataframe=False)
         with open(f"{filename}.csv", 'w', newline='') as file:
@@ -143,6 +151,7 @@ class UserItemRecommender(ABC):
 
         current_user_num = self.recommendations[0][0]
         user_rec_dict = dict()
+        print('- saving as json')
         for row in tqdm(self.recommendations):
             if row[0] != current_user_num:
                 recommendation_dict[current_user_num] = user_rec_dict

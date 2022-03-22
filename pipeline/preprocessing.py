@@ -1,202 +1,266 @@
-import random
 import pandas as pd
-import re
-
 from datetime import datetime
-from typing import Optional
+from typing import List, Union, Optional
 
-from sandbox import config as cfg
+DOWNLOAD_DATE = '2021-11-15'
+DOWNLOAD_DATE = datetime.strptime(str(DOWNLOAD_DATE), "%Y-%m-%d")
 
 
-def get_region_code(region_name: str, region_numbers: dict) -> Optional[int]:
+def get_user_age_in_years(birth_date) -> int:
+    date_1 = datetime.strptime(str(birth_date), "%Y-%m-%d")
+    return abs((DOWNLOAD_DATE - date_1).days) // 365
+
+
+def get_region_code_for_user(region_name: str, region_numbers: dict) -> Optional[int]:
     try:
         return region_numbers[region_name]
     except KeyError:
         return None
 
-def get_org_id(org_name: str, org_dict: dict) -> Optional[int]:
+
+def get_region_code_for_event(region_name: str) -> Optional[int]:
+    region_numbers = {
+        'Белгородская обл': 31,
+        'Калужская обл': 40,
+        'г Санкт-Петербург': 78,
+        'Курганская обл': 45,
+        'Нижегородская обл': 52,
+        'Самарская обл': 63,
+        'Ярославская обл': 76,
+        'Свердловская обл': 66,
+        'Тульская обл': 71,
+        'Пермский край': 59,
+        'г Москва': 77,
+        'Тверская обл': 69,
+        'Респ Карелия': 10,
+        'Ульяновская обл': 73,
+        'АО Ханты-Мансийский Автономный округ - Югра': 86,
+        'Омская обл': 55,
+        'Смоленская обл': 67,
+        'Тюменская обл': 72,
+        'Тамбовская обл': 68,
+        'Московская обл': 50,
+        'Кемеровская обл': 42,
+        'Чувашская республика Чувашия': 21,
+        'Респ Татарстан': 16,
+        'Рязанская обл': 62,
+        'Ставропольский край': 26,
+        'Пензенская обл': 58,
+        'Респ Бурятия': 3,
+        'Новосибирская обл': 54,
+        'Краснодарский край': 23,
+        'Респ Марий Эл': 12,
+        'Астраханская обл': 30,
+        'Удмуртская Респ': 18,
+        'Ивановская обл': 37,
+        'Забайкальский край': 75,
+        'Саратовская обл': 64,
+        'Волгоградская обл': 34,
+        'Респ Крым': 82,
+        'Кировская обл': 43,
+        'Челябинская обл': 74,
+        'Приморский край': 25,
+        'Ростовская обл': 61,
+        'Владимирская обл': 33,
+        'Красноярский край': 24,
+        'Курская обл': 46,
+        'Камчатский край': 41,
+        'Респ Мордовия': 13,
+        'Хабаровский край': 27,
+        'Респ Дагестан': 5,
+        'Респ Башкортостан': 2,
+        'Томская обл': 70,
+        'Респ Адыгея': 1,
+        'Алтайский край': 22,
+        'Орловская обл': 57,
+        'Костромская обл': 44,
+        'Вологодская обл': 35,
+        'Ямало-Ненецкий ао': 89,
+        'Оренбургская обл': 56,
+        'Калининградская обл': 39,
+        'Респ Хакасия': 19,
+        'Респ Коми': 11,
+        'г Севастополь': 92,
+        'Липецкая обл': 48,
+        'Респ Саха /Якутия/': 14,
+        'Магаданская обл': 49,
+        'Новгородская обл': 53,
+        'Ямало-Ненецкий АО': 89,
+        'Чеченская Респ': 95,
+        'Мурманская обл': 51,
+        'Респ Северная Осетия - Алания': 15,
+        'Кабардино-Балкарская респ': 7,
+        'Воронежская обл': 36,
+        'респ Дагестан': 5,
+        'Амурская обл': 28,
+        'Кабардино-Балкарская Респ': 7,
+        'Сахалинская обл': 65,
+        'Брянская обл': 32,
+        'Ленинградская обл': 47,
+        'Архангельская обл': 29,
+        'Иркутская обл': 38,
+        'Карачаево-Черкесская Респ': 9,
+        'Ханты-Мансийский Автономный округ - Югра': 86,
+        'Респ Алтай': 4,
+        'Респ Ингушетия': 6,
+        'Ненецкий АО': 83,
+        'респ Бурятия': 3,
+        'Чеченская респ': 95,
+        'Псковская обл': 60,
+        'Респ Калмыкия': 8,
+        'п Рязановское': 77,
+        'Респ Тыва': 17,
+        'респ Татарстан': 16,
+        'п Кленовское': 77,
+        'п Десеновское': 77,
+        'п Михайлово-Ярцевское': 77,
+        'Еврейская Аобл': 79,
+        'респ Саха /Якутия/': 14,
+        'респ Мордовия': 13,
+        'п Новофедоровское': 77,
+        'ао Ханты-Мансийский Автономный округ - Югра': 86,
+        'респ Ингушетия': 6,
+        'респ Башкортостан': 2,
+        'респ Карелия': 10,
+        'респ Марий Эл': 12,
+        'обл Кемеровская область - Кузбасс': 42,
+        'Удмуртская респ': 18
+    }
     try:
-        return org_dict[org_name]
+        return region_numbers[region_name]
     except KeyError:
         return None
 
-def get_user_dataframe(users_data_path: str,
-                       uniq_file_path: str,
-                       region_file_path: str,
-                       region_nums_file_path: str) -> pd.DataFrame:
-    users_df = pd.read_csv(users_data_path, sep=';')
-    uniq_df = pd.read_csv(uniq_file_path, sep=';')
-    region_df = pd.read_csv(region_file_path, sep=';')
-    region_nums = pd.read_csv(region_nums_file_path)
 
-    users_df['create_date'] = pd.to_datetime(
-        [datetime.fromtimestamp(x).strftime('%Y-%m-%d') for x in users_df['create_date']])
-    uniq_df['create_date'] = pd.to_datetime(uniq_df['create_date'])
-    uniq_df['user_phone_details_id'] = uniq_df['user_phone_details'].apply(lambda x:
-                                                                           re.sub('(\..*)', '', x.replace('iOS ', ''))
-                                                                           if 'iOS' in x
-                                                                           else re.sub('\ \(.*', '', x))
-    uniq_df['user_phone_details_id'] = uniq_df['user_phone_details_id'].apply(lambda x:
-                                                                              re.sub('(\..*)', '', x)
-                                                                              if 'Android' in x
-                                                                              else x)
-    uniq_df['type_phone'] = uniq_df['user_phone_details_id'].apply(lambda x:
-                                                                   x.replace('iOS,', '2').split()[0]
-                                                                   if 'iOS' in x
-                                                                   else x.replace('Android,', '1').split()[0])
+def get_user_age(user_id: str, user_age: dict) -> Optional[int]:
+    try:
+        return user_age[str(user_id)]
+    except KeyError:
+        return None
 
-    users_df = users_df.merge(uniq_df, on=['user_id'], how='left')
-    users_df = users_df.merge(region_df, on=['user_id'], how='left')
 
-    users_df['user_birth'] = pd.to_datetime(users_df['user_birth'], yearfirst=True,
-                                            infer_datetime_format=True)
-    users_df['age'] = users_df['user_birth'].apply(lambda x: int(round((datetime.now() - x).days / 365.2425, 0)))
+def get_user_dataframe(
+        users_file_path: str,
+        regions_file_path: str,
+        regions_nums_file_path: str
+) -> pd.DataFrame:
+    users_df = pd.read_csv(users_file_path, sep=';')
+    users_age = users_df
+    users_age['user_age'] = users_age['user_birth'].apply(func=get_user_age_in_years)
+    users_age_dict = dict(zip(users_age.user_id, users_age.user_age))
 
+    users_regions_df = pd.read_csv(regions_file_path, sep=';')
+    region_nums = pd.read_csv(regions_nums_file_path)
     region_nums = region_nums.rename(columns={
         'Наименование субъекта': 'region_name',
         'Код ГИБДД': 'region_code'
     })
     region_nums_dict = dict(zip(region_nums.region_name, region_nums.region_code))
-    users_df.loc[users_df.region.notna(), ['user_region']] = users_df['region'].dropna().\
-        apply(func=get_region_code, region_numbers=region_nums_dict)
+    users_regions = users_regions_df
+    users_regions['region_code'] = users_regions['region'].apply(func=get_region_code_for_user,
+                                                                 region_numbers=region_nums_dict)
 
-    users_df = users_df.rename(columns={'create_date_x': 'account_create_date', 'create_date_y': 'app_open_date'})
-    users_df['diff'] = users_df['app_open_date'] - users_df['account_create_date']
-
-    clicked_users_df = users_df[users_df['buyer_mobile_phone'].notna()]
-    clicked_users = clicked_users_df.groupby(['user_id'])['app_open_date'].count().reset_index().rename(
-        columns={'app_open_date': 'in_count'})
-    clicked_users = clicked_users_df.merge(clicked_users, on=['user_id'], how='left')
-    users_full = clicked_users.drop_duplicates(subset=['user_id'], ignore_index=True)
-
+    users_full = users_regions
+    users_full['age'] = users_full['user_id'].apply(func=get_user_age, user_age=users_age_dict)
+    users_full = users_full.dropna(subset=['age'])
     return users_full
 
-def get_organization_dataframe(organizations_data_path: str) -> pd.DataFrame:
-    organization_df = pd.read_csv(organizations_data_path, sep=';')
-    return organization_df
 
-def get_click_datframe(clicks_data_path: str) -> pd.DataFrame:
-    click_df = pd.read_csv(clicks_data_path, sep=';', encoding= 'unicode_escape', error_bad_lines=False)
-    click_df = click_df.drop_duplicates(['create_time', 'user_id'])
-    return click_df
-
-def get_event_dataframe(events_data_path: str,
-                        all_events_data_path: str,
-                        organizations_dataframe: pd.DataFrame) -> pd.DataFrame:
-    events_df = pd.read_csv(events_data_path, sep=';', error_bad_lines=False)
-    events_df = events_df.rename(columns={'Ссылка на покупку билета': 'url',
-                                    'ID': 'session_id',
-                                    'Название события': 'session_name',
-                                    'Дополнительная ссылка на покупку билета': 'additional_url',
-                                    'Организатор мероприятия': 'organization_name'})
-
-    events_df['session_identity'] = events_df['session_name'].apply(lambda x: x.split()[0].strip())
-    events_df = events_df.loc[(events_df['url'].notna()) | (events_df['additional_url'].notna())]
-
-    events_pushka_accepted_30122021_df = pd.read_csv(all_events_data_path, sep=',')
-    events_pushka_accepted_30122021_df = events_pushka_accepted_30122021_df[
-        (events_pushka_accepted_30122021_df['entity.saleLink'].notna()) |
-        (events_pushka_accepted_30122021_df['entity.additionalSaleLinks.0'])]
-
-    events_pushka_accepted_30122021_df['session_identity'] = events_pushka_accepted_30122021_df['entity.name'
-    ].apply(lambda x:
-            x.split()[0].strip())
-
-    events_pushka_accepted_30122021_df = events_pushka_accepted_30122021_df.\
-        rename(columns={'entity.saleLink': 'url',
-                        'entity._id': 'session_id',
-                        'entity.name': 'session_name',
-                        'entity.additionalSaleLinks.0': 'additional_url',
-                        'entity.organization._id': 'organization_id',
-                        'entity.organization.name': 'organization_name'})
-
-    events_all_df = pd.concat([events_pushka_accepted_30122021_df, events_df])
-    events_all_df = events_all_df.drop_duplicates(['session_id', 'url', 'additional_url'])
-
-    org_id_dict = dict(zip(organizations_dataframe['Учреждение'], organizations_dataframe['ID']))
-
-    events_all_df['organization_id'].fillna(
-        events_all_df[events_all_df['organization_id'].isnull()]['organization_name'].apply(func=get_org_id,
-                                                                                      org_dict=org_id_dict),
-        inplace=True)
-    events_all_df = events_all_df.astype({"organization_id": "int"})
-
-    events_1 = events_all_df[events_all_df['additional_url'].isnull()].drop('additional_url', axis=1)
-    events_2 = events_all_df[events_all_df['url'] == events_all_df['additional_url']].drop('additional_url', axis=1)
-    events_3 = events_all_df.loc[events_all_df['additional_url'].notna()].drop_duplicates(
-        subset=['additional_url', 'url']).drop('additional_url', axis=1)
-    events_4 = events_all_df.loc[events_all_df['additional_url'].notna()].drop_duplicates(
-        subset=['additional_url', 'url']).drop('url', axis=1).rename(columns={'additional_url': 'url'})
-
-    event = pd.concat([events_1, events_2, events_3, events_4], ignore_index=True)
-    event.drop_duplicates(inplace=True)
-
-    return event
-
-def get_merged_click_event_dataframe(events_dataframe: pd.DataFrame,
-                                     clicks_dataframe: pd.DataFrame,
-                                     organizations_dataframe: pd.DataFrame,
-                                     users_dataframe) -> pd.DataFrame:
-    events_links = events_dataframe['url'].unique()
-    clicks_links = clicks_dataframe['url'].unique()
-
-    equal_links = []
-
-    for i in clicks_links:
-        for j in events_links:
-            if i == j:
-                equal_links.append(i)
-
-    click_filter = clicks_dataframe['url'].isin(equal_links)
-    clicks_dataframe = clicks_dataframe[click_filter]
-
-    clicks_add = pd.merge(clicks_dataframe, events_dataframe, how='left', on='url')
-    organizations_dataframe = organizations_dataframe.rename(
-        columns= {'ID': 'organization_id','Категория': 'org_category', 'Код': 'org_region_number'})
-    clicks_add = pd.merge(clicks_add, organizations_dataframe[['organization_id', 'org_region_number', 'org_category']],
-                          how = 'left', on = 'organization_id')
-    clicks_add = clicks_add[clicks_add['org_category'].notna()]
-    clicks_add['type'] = clicks_add[['org_category', 'session_identity']].apply(lambda x: '_'.join(x), axis=1)
-
-    clicks_add = pd.merge(clicks_add, users_dataframe[['user_id', 'age', 'user_region']],
-                         how='left', on='user_id')
-    clicks_add = clicks_add[clicks_add['user_region'].notna()]
-
-    return clicks_add
-
-def save_to_csv(dataframe: pd.DataFrame, path: str):
-    dataframe.to_csv(path + 'cliks_add_3.csv', sep=';', index=False)
-
-if __name__ == "__main__":
-    random.seed(43)
-
-    users_file = cfg.USERS_FILE_PATH
-    uniq_file = cfg.UNIQ_FILE_PATH
-    region_file = cfg.REGION_FILE_PATH
-    region_nums_file = cfg.REGION_NUMS_FILE_PATH
-    users_full = get_user_dataframe(users_file, uniq_file, region_file, region_nums_file)
-
-    organizations_file = cfg.ORGANIZATIONS_FILE_PATH
-    organizations = get_organization_dataframe(organizations_file)
-
-    clicks_file = cfg.CLICK_FILE_PATH
-    clicks = get_click_datframe(clicks_file)
-
-    events_file = cfg.EVENTS_FILE_PATH
-    all_events_file = cfg.ALL_EVENTS_FILE_PATH
-    events = get_event_dataframe(events_file, all_events_file, organizations)
-
-    full_dataframe = get_merged_click_event_dataframe(events, clicks, organizations, users_full)
-
-    path = cfg.MAIN_PATH
-    save_to_csv(full_dataframe, path)
+def get_region_from_address(address: str) -> str:
+    return address.split(',')[0]
 
 
+def get_event_region(org_id: int, regions_dict: dict) -> Optional[int]:
+    try:
+        return regions_dict[org_id]
+    except KeyError:
+        return None
 
 
+def get_event_category(org_id: int, categories_dict) -> Optional[str]:
+    try:
+        return categories_dict[org_id]
+    except KeyError:
+        return None
 
 
+def get_events_dataframe(
+        events_file_path: str,
+        organizations_file_path: str
+) -> pd.DataFrame:
+    all_events_df = pd.read_csv(events_file_path)
+    organizations_df = pd.read_csv(organizations_file_path, sep=';')
+
+    organizations = organizations_df
+    organizations = organizations.rename(columns={
+        'ID': 'org_id',
+        'Учреждение': 'org_name',
+        'Адрес': 'address',
+        'ИНН': 'INN',
+        'Категория': 'category'
+    })
+    organizations['region'] = organizations['address'].apply(func=get_region_from_address)
+    org_id_region = dict(zip(organizations.org_id, organizations.region))
+    org_id_category = dict(zip(organizations.org_id, organizations.category))
+
+    all_events = all_events_df
+    all_events = all_events.rename(columns={
+        'entity._id': 'event_id',
+        'entity.name': 'event_name',
+        'entity.saleLink': 'link',
+        'entity.additionalSaleLinks.0': 'add_link',
+        'entity.organization._id': 'org_id',
+        'entity.organization.name': 'org_name'
+    })
+    all_events = all_events.dropna(subset=['org_id'])
+    all_events = all_events.astype({'org_id': int})
+
+    all_events['region_name'] = all_events['org_id'].apply(func=get_event_region, regions_dict=org_id_region)
+    all_events['category'] = all_events['org_id'].apply(func=get_event_category, categories_dict=org_id_category)
+
+    all_events['region_code'] = all_events['region_name'].apply(func=get_region_code_for_event)
+    all_events = all_events.dropna(subset=['region_code'])
+    all_events['region_code'] = all_events['region_code'].astype(int)
+    return all_events
 
 
+def get_clicks_dataframe(
+        clicks_file_path: str
+) -> pd.DataFrame:
+    clicks_df = pd.read_csv(clicks_file_path, sep=';')
+    clicks = clicks_df
+    clicks = clicks.drop(columns=['url',
+                                  'create_date',
+                                  'user_region',
+                                  'user_phone_details',
+                                  'buyer_mobile_phone',
+                                  'user_phone_details',
+                                  'user_phone_details_id',
+                                  'user_phone_details_id_2',
+                                  'session_identity',
+                                  'organization_name',
+                                  'Org_region_number', 'org_category', 'age'
+                                  ])
+    clicks = clicks.rename(columns={
+        'session_id': 'event_id',
+        'session_name': 'event_name'
+    })
+    clicks = clicks.drop_duplicates(['create_time', 'user_id'])
+    clicks = clicks.dropna(subset=['event_id', 'organization_id'])
+    return clicks
 
 
+def get_future_event_dataframe(
+        future_event_file_path: str
+) -> pd.DataFrame:
+    return pd.read_csv(future_event_file_path, sep=';')
+
+
+def get_user_event_dataframe(
+        user_event_file_path: str
+) -> pd.DataFrame:
+    user_event_df = get_clicks_dataframe(user_event_file_path)
+    user_event = user_event_df.groupby(['user_id', 'event_id', 'event_name'])['create_time'].count().reset_index()
+    user_event = user_event.rename(columns={'create_time': 'clicks_count'})
+    user_event['event_id'] = user_event['event_id'].astype(int)
+    return user_event
