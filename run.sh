@@ -1,4 +1,5 @@
-python /app/prepare_dataframes.py \
+python unpack_rars.py; \
+  python /app/prepare_dataframes.py \
     /data/cliks_add.csv \
     /data/events_pushka_accepted_30122021.csv \
     /data/events.csv \
