@@ -65,6 +65,8 @@ def run_recommender(file_name: str) -> None:
 
 
 if __name__ == "__main__":
+    print('INFO: making recommendations ...')
+
     if args.recommender == 'als':
         recommender = ALSRecommender(
             confidence='alpha',

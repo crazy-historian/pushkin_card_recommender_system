@@ -62,6 +62,8 @@ args = vars(args)
 paths = list(args.values())
 
 if __name__ == "__main__":
+    print('INFO: preparing dataframes ...')
+
     for path in paths[:-1]:
         if not Path(path).is_file():
             raise OSError(f'File {path} was not found.')

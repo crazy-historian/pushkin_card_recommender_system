@@ -17,19 +17,7 @@ class UserItemRecommender(ABC):
     An interface for ALS and BPR recommender models from implicit python module.
     """
 
-    def __init__(self,
-                 # user_item_df: pd.DataFrame,
-                 # extra_item_ids: List[int] = None,
-                 num_of_threads: int = 0,
-                 ):
-        """
-        :param user_item_df: a pandas Dataframe witch the following columns:
-        +---------+---------+--------+----------+----------+
-        | user_id | item_id | rating | user_num | item_num |
-        +---------+---------+--------+----------+----------+
-        :param extra_item_ids: a list of  extra item ids to filter out from the output
-
-        """
+    def __init__(self, num_of_threads: int = 0):
         self.model = None
         self.recommendations = list()
         self.user_item = None
@@ -43,9 +31,16 @@ class UserItemRecommender(ABC):
         self.num_of_threads = num_of_threads
 
     @abstractmethod
-    def fit(self, user_item_df: pd.DataFrame, extra_items_ids: Optional[List[int]] = None, show_progress: bool = True, *args, **kwargs) -> None:
+    def fit(self, user_item_df: pd.DataFrame, extra_items_ids: Optional[List[int]] = None, show_progress: bool = True,
+            *args, **kwargs) -> None:
         """
-        Fitting the model with passed parameters
+        Fitting the model with passed parameters:
+
+        :param user_item_df: a pandas Dataframe witch the following columns:
+        +---------+---------+--------+----------+----------+
+        | user_id | item_id | rating | user_num | item_num |
+        +---------+---------+--------+----------+----------+
+        :param extra_item_ids: a list of  extra item ids to filter out from the output
         """
         print('- fitting the model')
         self.user_item = user_item_df
@@ -79,7 +74,7 @@ class UserItemRecommender(ABC):
         :param as_pd_dataframe:
         :param N:  number of recommended items
         :param user_id: string value of user id from source data
-        :return:
+        :return: the list of recommendations as the list type or the pandas dataframe
         """
         user_num = self.user_number_per_id[user_id]
         recommended = self.model.recommend(user_num, self.sparse_user_item, filter_items=self.extra_item_ids, N=N)
@@ -94,7 +89,7 @@ class UserItemRecommender(ABC):
                 ])
             except KeyError:
                 # TODO: make error description more explicit
-                #  when the number of cultural events is too small, recommender cannot return list of 10 events
+                #  when the number of cultural events is too small, recommender cannot return the list of N events
                 continue
         if as_pd_dataframe:
             return pd.DataFrame(recommendations, columns=['user_id', 'item_id', 'rating'])
@@ -106,7 +101,7 @@ class UserItemRecommender(ABC):
         Calculates recommendation for all users with the default parameters for implicit.<model>.recommend method and
         saves it as list or pd.Dataframe
         :param as_pd_dataframe: boolean flag, if True -- return as a pd.Dataframe, otherwise as a list
-        :return:
+        :return: the list of recommendations as the list type or the pandas dataframe
         """
         print('- preparing the list of recommendations')
         for user_num in tqdm(self.user_number_per_id.keys()):
@@ -121,7 +116,7 @@ class UserItemRecommender(ABC):
         Saves recommendation dataframe as .csv without changes
 
         :param filename: target .csv full filename
-        :return: boolean value
+        :return: None
         """
         print('- saving as csv')
         if self.recommendations is None:
@@ -143,7 +138,7 @@ class UserItemRecommender(ABC):
             }
 
         :param filename: target .json full filename
-        :return: boolean value
+        :return: None
         """
         recommendation_dict = dict()
         if self.recommendations is None:
@@ -186,7 +181,8 @@ class ALSRecommender(UserItemRecommender):
         self.K1 = K1
         self.B = B
 
-    def fit(self, user_item_df: pd.DataFrame, extra_item_ids: Optional[List[int]] = None, show_progress: bool = True, *args, **kwargs) -> None:
+    def fit(self, user_item_df: pd.DataFrame, extra_item_ids: Optional[List[int]] = None, show_progress: bool = True,
+            *args, **kwargs) -> None:
         super().fit(user_item_df, extra_item_ids, show_progress, args, kwargs)
         self.model = AlternatingLeastSquares(
             factors=self.factors,
@@ -215,7 +211,8 @@ class BPRRecommender(UserItemRecommender):
         self.regularization = regularization
         self.iterations = iterations
 
-    def fit(self, user_item_df: pd.DataFrame, extra_item_ids: Optional[List[int]] = None, show_progress: bool = True, *args, **kwargs) -> None:
+    def fit(self, user_item_df: pd.DataFrame, extra_item_ids: Optional[List[int]] = None, show_progress: bool = True,
+            *args, **kwargs) -> None:
         super().fit(user_item_df, extra_item_ids, show_progress, args, kwargs)
         self.model = BayesianPersonalizedRanking(
             factors=self.factors,

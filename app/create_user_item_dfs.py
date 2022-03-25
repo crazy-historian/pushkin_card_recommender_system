@@ -49,6 +49,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 if __name__ == "__main__":
+    print('INFO: creating user-event dataframes ...')
     for path in args.user_df, args.event_df, args.user_event_df:
         if not Path(path).is_file():
             raise OSError(f'File {path} was not found.')
