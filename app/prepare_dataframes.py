@@ -73,6 +73,8 @@ if __name__ == "__main__":
 
     target_dir = paths[-1]
 
+    # TODO: add filtering passed cultural events (pipeline.filtering.get_future_event_dataframe)
+
     user_event_df = prs.get_user_event_dataframe(
         user_event_file_path=args['clicks_file']
     )

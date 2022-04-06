@@ -18,6 +18,7 @@ def get_region_code_for_user(region_name: str, region_numbers: dict) -> Optional
         return None
 
 
+# TODO: save region_numbers as json to clean up the code below
 def get_region_code_for_event(region_name: str) -> Optional[int]:
     region_numbers = {
         'Белгородская обл': 31,
