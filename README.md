@@ -46,7 +46,7 @@ from recommenders.implicit_models import ALSRecommender
 user_event_df = pd.read_csv('user_event_df.csv')
 
 """
-      	user_event_df shoud be looks like this:
+      	user_event_df should looks like this:
         +---------+---------+--------+----------+----------+
         | user_id | item_id | rating | user_num | item_num |
         +---------+---------+--------+----------+----------+
