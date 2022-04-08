@@ -34,3 +34,34 @@ source run_docker.sh
 ```
 
 Примечание: для того, чтобы скрипт мог активировать виртуальную среду, необходимо запустить от имени администратора PowerShell и ввести команду *Set-ExecutionPolicy RemoteSigned.* На вопросы в интерактивном режиме необходимо ответить *A*
+
+## Пример использования рекомендательной модели
+
+Во время разработки рекомендательной системы основной упор был сделан на то, чтобы максимально изолировать код модели от пайплана очистки и предобработки предоставленных данных (которые, очевидно, являются сильно вычищенной выгрузкой из БД) . Это позволит в дальнейшем задействовать модели рекомендаций при любой другом способе выборки и предобработки данных.
+
+```python
+import pandas as pd
+from recommenders.implicit_models import ALSRecommender
+
+user_event_df = pd.read_csv('user_event_df.csv')
+
+"""
+      	user_event_df shoud be looks like this:
+        +---------+---------+--------+----------+----------+
+        | user_id | item_id | rating | user_num | item_num |
+        +---------+---------+--------+----------+----------+
+        
+"""
+
+recommender = ALSRecommender(
+    confidence='alpha',
+    alpha_value=15
+)
+recommender.fit(user_event_df)
+recommender.get_all_recommendation()
+recommender.save_as_json('recommendations')
+
+```
+
+
+
