@@ -230,21 +230,10 @@ def get_clicks_dataframe(
 ) -> pd.DataFrame:
     clicks_df = pd.read_csv(clicks_file_path, sep=';')
     clicks = clicks_df
-    clicks = clicks.drop(columns=['url',
-                                  'create_date',
-                                  'user_region',
-                                  'user_phone_details',
-                                  'buyer_mobile_phone',
-                                  'user_phone_details',
-                                  'user_phone_details_id',
-                                  'user_phone_details_id_2',
-                                  'session_identity',
-                                  'organization_name',
-                                  'Org_region_number', 'org_category', 'age'
-                                  ])
     clicks = clicks.rename(columns={
         'session_id': 'event_id',
-        'session_name': 'event_name'
+        'session_name': 'event_name',
+        'session_identity': 'event_type'
     })
     clicks = clicks.drop_duplicates(['create_time', 'user_id'])
     clicks = clicks.dropna(subset=['event_id', 'organization_id'])
