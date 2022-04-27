@@ -106,6 +106,7 @@ class UserItemRecommender(ABC):
         :return: the list of recommendations as the list type or the pandas dataframe
         """
         print('- preparing the list of recommendations')
+        self.recommendations = list()
         for user_num in tqdm(self.user_number_per_id.keys()):
             self.recommendations.extend(self.get_user_recommendation(user_num, as_pd_dataframe=False))
         if as_pd_dataframe:
