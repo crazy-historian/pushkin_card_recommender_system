@@ -4,6 +4,7 @@
 
 import argparse
 import pandas as pd
+from tqdm import tqdm
 import pipeline.filtering as ftr
 from recommenders.implicit_models import ALSRecommender, BPRRecommender
 from pathlib import Path
@@ -84,10 +85,12 @@ if __name__ == "__main__":
     if Path(args.user_event_df).is_file():
         run_recommender(args.user_event_df)
     elif Path(args.user_event_df).is_dir():
-        for file in Path(args.user_event_df).iterdir():
-            print(f'{str(file)} is processed ...')
+        count = 0
+        for path in Path(args.user_event_df).iterdir():
+            if path.is_file():
+                count += 1
+        for file in tqdm(iterable=Path(args.user_event_df).iterdir(), desc='Making recommendations', total=count):
             run_recommender(str(file))
-            print(' - finished.')
     else:
         raise OSError(f'Incorrect value of "user_event_df" parameter: file or directory {args.user_event_df}'
                       f'does not exist.')

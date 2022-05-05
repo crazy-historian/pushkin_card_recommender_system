@@ -5,7 +5,6 @@ import json
 import pandas as pd
 import scipy.sparse as sparse
 
-from tqdm import tqdm
 from bidict import bidict
 from abc import abstractmethod, ABC
 from typing import Optional, List, Union
@@ -44,7 +43,7 @@ class UserItemRecommender(ABC):
         +---------+---------+--------+----------+----------+
         :param extra_item_ids: a list of  extra item ids to filter out from the output
         """
-        print('- fitting the model')
+        # print('- fitting the model')
         self.user_item = user_item_df
         self.extra_item_ids = extra_items_ids
 
@@ -105,9 +104,8 @@ class UserItemRecommender(ABC):
         :param as_pd_dataframe: boolean flag, if True -- return as a pd.Dataframe, otherwise as a list
         :return: the list of recommendations as the list type or the pandas dataframe
         """
-        print('- preparing the list of recommendations')
         self.recommendations = list()
-        for user_num in tqdm(self.user_number_per_id.keys()):
+        for user_num in self.user_number_per_id.keys():
             self.recommendations.extend(self.get_user_recommendation(user_num, as_pd_dataframe=False))
         if as_pd_dataframe:
             return pd.DataFrame(self.recommendations, columns=['user_id', 'item_id', 'rating'])
@@ -146,20 +144,21 @@ class UserItemRecommender(ABC):
         recommendation_dict = dict()
         if self.recommendations is None:
             self.get_all_recommendation(as_pd_dataframe=False)
+        if len(self.recommendations) != 0:
+            current_user_num = self.recommendations[0][0]
+            user_rec_dict = dict()
+            for row in self.recommendations:
+                if row[0] != current_user_num:
+                    recommendation_dict[current_user_num] = user_rec_dict
+                    user_rec_dict = dict()
+                    current_user_num = row[0]
+                else:
+                    user_rec_dict[row[1]] = round(float(row[2]), 3)
+            with open(f'{filename}.json', 'w') as json_file:
+                json.dump(recommendation_dict, json_file)
+        else:
+            print(f'{filename}: empty list of recommendations for this region.')
 
-        current_user_num = self.recommendations[0][0]
-        user_rec_dict = dict()
-        print('- saving as json')
-        for row in tqdm(self.recommendations):
-            if row[0] != current_user_num:
-                recommendation_dict[current_user_num] = user_rec_dict
-                user_rec_dict = dict()
-                current_user_num = row[0]
-            else:
-                user_rec_dict[row[1]] = round(float(row[2]), 3)
-
-        with open(f'{filename}.json', 'w') as json_file:
-            json.dump(recommendation_dict, json_file)
 
 
 class ALSRecommender(UserItemRecommender):
@@ -184,7 +183,7 @@ class ALSRecommender(UserItemRecommender):
         self.K1 = K1
         self.B = B
 
-    def fit(self, user_item_df: pd.DataFrame, extra_item_ids: Optional[List[int]] = None, show_progress: bool = True,
+    def fit(self, user_item_df: pd.DataFrame, extra_item_ids: Optional[List[int]] = None, show_progress: bool = False,
             *args, **kwargs) -> None:
         super().fit(user_item_df, extra_item_ids, show_progress, args, kwargs)
         self.model = AlternatingLeastSquares(
@@ -223,5 +222,4 @@ class BPRRecommender(UserItemRecommender):
             regularization=self.regularization,
             iterations=self.iterations,
             num_threads=self.num_of_threads)
-
         self.model.fit(self.sparse_item_user, show_progress=show_progress)
